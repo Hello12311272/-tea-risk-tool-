@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">茶言觀色 · 客戶流失風險評估器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="text-gray-800" id="bodyElement">
+
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <span class="text-2xl">🧋</span>
+                <span class="font-bold text-xl text-green-900">
+                    <span data-lang="zh" class="active">茶言觀色</span>
+                    <span data-lang="cn">茶言观色</span>
+                    <span data-lang="en">TeaInsight</span>
+                </span>
+                <span class="text-sm font-normal text-gray-500">| 
+                    <span data-lang="zh" class="active">客戶流失風險評估器</span>
+                    <span data-lang="cn">客户流失风险评估器</span>
+                    <span data-lang="en">Customer Churn Risk Assessor</span>
+                </span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="switchLanguage('zh')" class="lang-btn active" id="langZhBtn">繁體</button>
+                <button onclick="switchLanguage('cn')" class="lang-btn" id="langCnBtn">簡體</button>
+                <button onclick="switchLanguage('en')" class="lang-btn" id="langEnBtn">English</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主內容區 -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        
+        <!-- 標題區 -->
+        <div class="bg-gradient-to-r from-green-800 to-green-700 rounded-2xl p-6 mb-8 text-white shadow-lg">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">
+                <span data-lang="zh" class="active">🧋 茶言觀色 · 客戶流失風險評估器</span>
+                <span data-lang="cn">🧋 茶言观色 · 客户流失风险评估器</span>
+                <span data-lang="en">🧋 TeaInsight · Customer Churn Risk Assessor</span>
+            </h1>
+            <p class="text-green-100 mb-4">
+                <span data-lang="zh" class="active">輸入顧客消費數據，系統將自動分群並顯示流失風險等級，提供具體經營建議。</span>
+                <span data-lang="cn">输入顾客消费数据，系统将自动分群并显示流失风险等级，提供具体经营建议。</span>
+                <span data-lang="en">Enter customer data to identify segment, churn risk, and get actionable recommendations.</span>
+            </p>
+            <div class="inline-flex items-center bg-green-700/50 px-3 py-1 rounded-full text-xs backdrop-blur">
+                <span class="mr-1">⚡</span>
+                <span data-lang="zh" class="active">基於 K-Means 分群模型 · 四大關鍵特徵 · K=4</span>
+                <span data-lang="cn">基于 K-Means 分群模型 · 四大关键特征 · K=4</span>
+                <span data-lang="en">K-Means Clustering · 4 Key Features · K=4</span>
+            </div>
+        </div>
+
+        <!-- CSV 批量分析區 -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+            <h3 class="font-bold text-gray-700 mb-4 flex items-center">
+                <span class="mr-2">📤</span>
+                <span data-lang="zh" class="active">批量分析</span>
+                <span data-lang="cn">批量分析</span>
+                <span data-lang="en">Batch Analysis</span>
+            </h3>
+            <div class="flex flex-wrap gap-3 mb-4">
+                <button onclick="downloadTemplate()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm flex items-center">
+                    📥 
+                    <span class="ml-1" data-lang="zh" class="active">下載模板</span>
+                    <span class="ml-1" data-lang="cn">下载模板</span>
+                    <span class="ml-1" data-lang="en">Download Template</span>
+                </button>
+                <label class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm cursor-pointer flex items-center">
+                    📤 
+                    <span class="ml-1" data-lang="zh" class="active">上傳 CSV</span>
+                    <span class="ml-1" data-lang="cn">上传 CSV</span>
+                    <span class="ml-1" data-lang="en">Upload CSV</span>
+                    <input type="file" id="csvFile" accept=".csv" onchange="handleCSVUpload(event)" class="hidden">
+                </button>
+                <button onclick="runBatchAnalysis()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center">
+                    🔍 
+                    <span class="ml-1" data-lang="zh" class="active">開始分析</span>
+                    <span class="ml-1" data-lang="cn">开始分析</span>
+                    <span class="ml-1" data-lang="en">Start Analysis</span>
+                </button>
+            </div>
+            <div id="csvPreview" class="hidden mb-4"></div>
+            <div id="batchResults" class="hidden"></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- 左側：輸入表單 -->
+            <div class="lg:col-span-4">
+                <div class="bg-white rounded-xl shadow-md p-6 sticky top-24">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                        <span class="mr-2">📋</span>
+                        <span data-lang="zh" class="active">請輸入顧客資料</span>
+                        <span data-lang="cn">请输入顾客资料</span>
+                        <span data-lang="en">Enter Customer Data</span>
+                    </h2>
+                    <form id="churnForm" class="space-y-4" onsubmit="return false;">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                🍵 
+                                <span data-lang="zh" class="active">月消費次數</span>
+                                <span data-lang="cn">月消费次数</span>
+                                <span data-lang="en">Monthly Visits</span>
+                                <span class="text-xs text-gray-400">(0-50)</span>
+                            </label>
+                            <input type="number" id="freq" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition" placeholder="8.42" min="0" max="50" step="0.01" value="8.42">
+                            <p class="text-xs text-red-500 mt-1 hidden" id="freqError">
+                                <span data-lang="zh" class="active">請輸入有效數字 (0-50)</span>
+                                <span data-lang="cn">请输入有效数字 (0-50)</span>
+                                <span data-lang="en">Please enter a valid number (0-50)</span>
+                            </p>
+                        </div>
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                💰 
+                                <span data-lang="zh" class="active">平均消費金額</span>
+                                <span data-lang="cn">平均消费金额</span>
+                                <span data-lang="en">Avg Spending</span>
+                                <span class="text-xs text-gray-400">(0-500)</span>
+                            </label>
+                            <input type="number" id="amount" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition" placeholder="73.14" min="0" max="500" step="0.01" value="73.14">
+                            <p class="text-xs text-red-500 mt-1 hidden" id="amountError">
+                                <span data-lang="zh" class="active">請輸入有效金額 (0-500)</span>
+                                <span data-lang="cn">请输入有效金额 (0-500)</span>
+                                <span data-lang="en">Please enter a valid amount (0-500)</span>
+                            </p>
+                        </div>
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                📆 
+                                <span data-lang="zh" class="active">距上次到店天數</span>
+                                <span data-lang="cn">距上次到店天数</span>
+                                <span data-lang="en">Days Since Last Visit</span>
+                                <span class="text-xs text-gray-400">(0-365)</span>
+                            </label>
+                            <input type="number" id="days" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition" placeholder="70.52" min="0" max="365" step="0.01" value="70.52">
+                            <p class="text-xs text-red-500 mt-1 hidden" id="daysError">
+                                <span data-lang="zh" class="active">請輸入有效天數 (0-365)</span>
+                                <span data-lang="cn">请输入有效天数 (0-365)</span>
+                                <span data-lang="en">Please enter valid days (0-365)</span>
+                            </p>
+                        </div>
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                ⭐ 
+                                <span data-lang="zh" class="active">顧客滿意度</span>
+                                <span data-lang="cn">顾客满意度</span>
+                                <span data-lang="en">Satisfaction</span>
+                                <span class="text-xs text-gray-400">(1-5)</span>
+                            </label>
+                            <input type="number" id="satisfaction" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition" placeholder="4.23" min="1" max="5" step="0.01" value="4.23">
+                            <p class="text-xs text-red-500 mt-1 hidden" id="satError">
+                                <span data-lang="zh" class="active">請輸入 1-5 之間的評分</span>
+                                <span data-lang="cn">请输入 1-5 之间的评分</span>
+                                <span data-lang="en">Please enter a rating between 1-5</span>
+                            </p>
+                        </div>
+                        
+                        <div class="flex space-x-3 pt-2">
+                            <button type="button" onclick="fillExample()" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium flex items-center justify-center">
+                                🔄 
+                                <span class="ml-1" data-lang="zh" class="active">使用範例</span>
+                                <span class="ml-1" data-lang="cn">使用范例</span>
+                                <span class="ml-1" data-lang="en">Use Example</span>
+                            </button>
+                            <button type="button" onclick="evaluateCustomer()" class="flex-1 px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 transition text-sm font-medium shadow-md flex items-center justify-center">
+                                🔍 
+                                <span class="ml-1" data-lang="zh" class="active">評估此顧客</span>
+                                <span class="ml-1" data-lang="cn">评估此顾客</span>
+                                <span class="ml-1" data-lang="en">Assess Customer</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- 四群體說明 -->
+                    <div class="mt-6 pt-6 border-t">
+                        <h3 class="text-sm font-medium text-gray-600 mb-3">
+                            <span data-lang="zh" class="active">📊 K-Means 四群體定義</span>
+                            <span data-lang="cn">📊 K-Means 四群体定义</span>
+                            <span data-lang="en">📊 K-Means Cluster Definitions</span>
+                        </h3>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>
+                                <span data-lang="zh" class="active">群體 0：高滿意沉睡客 (33% 流失)</span>
+                                <span data-lang="cn">群体 0：高满意沉睡客 (33% 流失)</span>
+                                <span data-lang="en">Cluster 0: High-Sat Dormant (33% churn)</span>
+                            </div>
+                            <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+                                <span data-lang="zh" class="active">群體 1：穩定客 (6% 流失)</span>
+                                <span data-lang="cn">群体 1：稳定客 (6% 流失)</span>
+                                <span data-lang="en">Cluster 1: Stable Customers (6% churn)</span>
+                            </div>
+                            <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+                                <span data-lang="zh" class="active">群體 2：核心價值客 (22% 流失)</span>
+                                <span data-lang="cn">群体 2：核心价值客 (22% 流失)</span>
+                                <span data-lang="en">Cluster 2: Core Value Customers (22% churn)</span>
+                            </div>
+                            <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
+                                <span data-lang="zh" class="active">群體 3：高風險流失客 (35% 流失)</span>
+                                <span data-lang="cn">群体 3：高风险流失客 (35% 流失)</span>
+                                <span data-lang="en">Cluster 3: High-Risk Churn (35% churn)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：結果展示 -->
+            <div class="lg:col-span-8 space-y-6">
+                
+                <!-- 評估結果卡片 (預設顯示) -->
+                <div id="resultSection" class="bg-white rounded-xl shadow-md p-6 fade-in">
+                    <div class="flex justify-between items-center mb-4 border-b pb-4">
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                            <span class="mr-2">📊</span>
+                            <span data-lang="zh" class="active">評估結果</span>
+                            <span data-lang="cn">评估结果</span>
+                            <span data-lang="en">Assessment Results</span>
+                            <span class="ml-3 px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full" id="clusterBadge">群組 0</span>
+                        </h2>
+                        <span class="text-sm text-gray-400" id="timestamp">剛剛更新</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- 左側：客戶畫像 -->
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-bold text-gray-800" id="clusterName">高滿意沉睡客</h3>
+                                <span class="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full" id="riskBadge">📉 流失比例 33%</span>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg text-sm text-gray-600 space-y-2">
+                                <div class="flex justify-between">
+                                    <span data-lang="zh" class="active">📊 月消費</span>
+                                    <span data-lang="cn">📊 月消费</span>
+                                    <span data-lang="en">📊 Monthly Visits</span>
+                                    <span class="font-bold text-gray-800"><span id="resFreq">8.42</span> 
+                                        <span data-lang="zh" class="active">次</span>
+                                        <span data-lang="cn">次</span>
+                                        <span data-lang="en">times</span>
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span data-lang="zh" class="active">💰 平均消費</span>
+                                    <span data-lang="cn">💰 平均消费</span>
+                                    <span data-lang="en">💰 Avg Spending</span>
+                                    <span class="font-bold text-gray-800">$<span id="resAmount">73.14</span></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span data-lang="zh" class="active">📆 距上次到店</span>
+                                    <span data-lang="cn">📆 距上次到店</span>
+                                    <span data-lang="en">📆 Days Since Last</span>
+                                    <span class="font-bold text-gray-800"><span id="resDays">70.52</span> 
+                                        <span data-lang="zh" class="active">天</span>
+                                        <span data-lang="cn">天</span>
+                                        <span data-lang="en">days</span>
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span data-lang="zh" class="active">⭐ 滿意度</span>
+                                    <span data-lang="cn">⭐ 满意度</span>
+                                    <span data-lang="en">⭐ Satisfaction</span>
+                                    <span class="font-bold text-gray-800"><span id="resSat">4.23</span></span>
+                                </div>
+                            </div>
+                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800">
+                                💡 <span data-lang="zh" class="active" id="insightText">滿意度高但許久未到，可能被其他品牌搶走，或近期生活型態改變。</span>
+                                <span data-lang="cn" id="insightTextCn">满意度高但许久未到，可能被其他品牌抢走，或近期生活型态改变。</span>
+                                <span data-lang="en" id="insightTextEn">High satisfaction but long absence - may have switched to competitors.</span>
+                            </div>
+                        </div>
+
+                        <!-- 右側：風險儀表 -->
+                        <div class="flex flex-col items-center justify-center bg-gray-50 rounded-lg p-4">
+                            <div class="relative w-40 h-40">
+                                <canvas id="gaugeChart"></canvas>
+                                <div class="absolute inset-0 flex items-center justify-center flex-col">
+                                    <span class="text-3xl font-bold text-gray-800" id="gaugeValue">33%</span>
+                                    <span class="text-xs text-gray-500">
+                                        <span data-lang="zh" class="active">流失風險</span>
+                                        <span data-lang="cn">流失风险</span>
+                                        <span data-lang="en">Churn Risk</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-center">
+                                <p class="text-sm font-medium" id="riskLevel">⚠️ 中高流失風險</p>
+                                <p class="text-xs text-gray-500">
+                                    <span data-lang="zh" class="active">所屬群體平均流失率</span>
+                                    <span data-lang="cn">所属群体平均流失率</span>
+                                    <span data-lang="en">Cluster average churn rate</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 行動建議 -->
+                    <div class="mt-6 bg-green-50 rounded-xl p-5 border border-green-100">
+                        <h4 class="font-bold text-green-900 mb-3 flex items-center">
+                            <span class="mr-2">📌</span>
+                            <span data-lang="zh" class="active">經營行動建議</span>
+                            <span data-lang="cn">经营行动建议</span>
+                            <span data-lang="en">Action Recommendations</span>
+                        </h4>
+                        <ul class="space-y-2 text-sm text-gray-700" id="actionList">
+                            <!-- 動態生成 -->
+                        </ul>
+                        <div class="mt-4 flex items-center justify-between bg-white px-4 py-2 rounded-lg shadow-sm">
+                            <span class="text-xs text-gray-500" id="goalText">🎯 目標：提升到店頻率，轉為「穩定客」</span>
+                            <button class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition">
+                                <span data-lang="zh" class="active">發送促銷訊息</span>
+                                <span data-lang="cn">发送促销信息</span>
+                                <span data-lang="en">Send Promotion</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 圖表區域 -->
+                <div id="chartsSection" class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
+                    <!-- 趨勢圖 -->
+                    <div class="bg-white rounded-xl shadow-md p-5">
+                        <h3 class="font-bold text-gray-700 mb-4 text-sm flex items-center">
+                            <span class="mr-2">📈</span>
+                            <span data-lang="zh" class="active">歷史消費趨勢（模擬）</span>
+                            <span data-lang="cn">历史消费趋势（模拟）</span>
+                            <span data-lang="en">Historical Spending Trend</span>
+                        </h3>
+                        <div class="chart-container">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- 雷達圖 -->
+                    <div class="bg-white rounded-xl shadow-md p-5">
+                        <h3 class="font-bold text-gray-700 mb-4 text-sm flex items-center">
+                            <span class="mr-2">📊</span>
+                            <span data-lang="zh" class="active">四維度綜合評分</span>
+                            <span data-lang="cn">四维度综合评分</span>
+                            <span data-lang="en">4-Dimension Score</span>
+                        </h3>
+                        <div class="chart-container">
+                            <canvas id="radarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- 頁脚 -->
+    <footer class="bg-white border-t mt-12 py-8">
+        <div class="max-w-6xl mx-auto px-4 text-center text-xs text-gray-400">
+            <p class="mb-2">
+                <span data-lang="zh" class="active">📊 基於 Colab 分析結果 · 四大特徵標準化後 K-Means 聚類 (K=4)</span>
+                <span data-lang="cn">📊 基于 Colab 分析结果 · 四大特征标准化后 K-Means 聚类 (K=4)</span>
+                <span data-lang="en">📊 Based on Colab Analysis · K-Means Clustering with 4 Features (K=4)</span>
+            </p>
+            <p class="mb-2">
+                <span data-lang="zh" class="active">特徵：月消費次數 | 平均消費金額 | 距上次到店天數 | 顧客滿意度</span>
+                <span data-lang="cn">特征：月消费次数 | 平均消费金额 | 距上次到店天数 | 顾客满意度</span>
+                <span data-lang="en">Features: Monthly Visits | Avg Spending | Days Since Last | Satisfaction</span>
+            </p>
+            <div class="flex justify-center space-x-4">
+                <a href="#" class="hover:text-green-600">
+                    <span data-lang="zh" class="active">隱私權條款</span>
+                    <span data-lang="cn">隐私权条款</span>
+                    <span data-lang="en">Privacy Policy</span>
+                </a>
+                <a href="#" class="hover:text-green-600">
+                    <span data-lang="zh" class="active">API 文檔</span>
+                    <span data-lang="cn">API 文档</span>
+                    <span data-lang="en">API Docs</span>
+                </a>
+                <span>© 2026 
+                    <span data-lang="zh" class="active">茶言觀色 Analytics</span>
+                    <span data-lang="cn">茶言观色 Analytics</span>
+                    <span data-lang="en">TeaInsight Analytics</span>
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript 邏輯 -->
+    <script>
+        // ==================== 語言切換 ====================
+        function switchLanguage(lang) {
+            // 更新所有帶 data-lang 屬性的元素
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                if (el.getAttribute('data-lang') === lang) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+            
+            // 更新 body 字體
+            document.getElementById('bodyElement').className = 'text-gray-800';
+            if (lang === 'en') {
+                document.getElementById('bodyElement').classList.add('lang-en');
+            }
+            
+            // 更新按鈕樣式
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-green-700', 'text-white', 'border-green-700');
+                btn.classList.add('bg-white', 'text-gray-700', 'border-gray-300');
+            });
+            
+            if (lang === 'zh') {
+                document.getElementById('langZhBtn').classList.add('active', 'bg-green-700', 'text-white', 'border-green-700');
+                document.getElementById('pageTitle').innerText = '茶言觀色 · 客戶流失風險評估器';
+            } else if (lang === 'cn') {
+                document.getElementById('langCnBtn').classList.add('active', 'bg-green-700', 'text-white', 'border-green-700');
+                document.getElementById('pageTitle').innerText = '茶言观色 · 客户流失风险评估器';
+            } else {
+                document.getElementById('langEnBtn').classList.add('active', 'bg-green-700', 'text-white', 'border-green-700');
+                document.getElementById('pageTitle').innerText = 'TeaInsight · Customer Churn Risk Assessor';
+            }
+            
+            // 重新渲染結果（如果有）
+            if (lastResult) {
+                updateUIText(lastResult);
+            }
+        }
+
+        // ==================== K-Means 四群體數據 ====================
+        const clusterCenters = {
+            0: { 
+                nameZh: "高滿意沉睡客", nameCn: "高满意沉睡客", nameEn: "High-Satisfaction Dormant",
+                freq: 8.42, amount: 73.14, days: 70.52, sat: 4.23, 
+                churn: 33, 
+                color: "#f59e0b",
+                insightZh: "滿意度高但許久未到，可能被其他品牌搶走，或近期生活型態改變。",
+                insightCn: "满意度高但许久未到，可能被其他品牌抢走，或近期生活型态改变。",
+                insightEn: "High satisfaction but long absence - may have switched to competitors.",
+                actionsZh: [
+                    "發送「久未見面」專屬優惠，例如第 2 杯半價",
+                    "推薦季節新品，利用高滿意度吸引回購",
+                    "可考慮簡訊問候 + 贈送小配料"
+                ],
+                actionsCn: [
+                    "发送「久未见面」专属优惠，例如第 2 杯半价",
+                    "推荐季节新品，利用高满意度吸引回购",
+                    "可考虑短信问候 + 赠送小配料"
+                ],
+                actionsEn: [
+                    "Send 'Long time no see' exclusive offer (2nd cup half price)",
+                    "Recommend seasonal new products",
+                    "Consider SMS greeting with small gift"
+                ],
+                goalZh: "提升到店頻率，轉為「穩定客」",
+                goalCn: "提升到店频率，转为「稳定客」",
+                goalEn: "Increase visit frequency, convert to 'Stable Customer'"
+            },
+            1: { 
+                nameZh: "穩定客", nameCn: "稳定客", nameEn: "Stable Customers",
+                freq: 7.1, amount: 59.04, days: 22.29, sat: 4.24, 
+                churn: 6, 
+                color: "#10b981",
+                insightZh: "忠誠度高、流失風險小，是門店的穩定基礎客群。",
+                insightCn: "忠诚度高、流失风险小，是门店的稳定基础客群。",
+                insightEn: "High loyalty, low churn risk - stable customer base.",
+                actionsZh: [
+                    "邀請升級 VIP 會員，享受專屬折扣",
+                    "提供生日禮遇與節日問候",
+                    "鼓勵分享體驗，擴大口碑傳播"
+                ],
+                actionsCn: [
+                    "邀请升级 VIP 会员，享受专属折扣",
+                    "提供生日礼遇与节日问候",
+                    "鼓励分享体验，扩大口碑传播"
+                ],
+                actionsEn: [
+                    "Invite to upgrade VIP membership",
+                    "Provide birthday treats and holiday greetings",
+                    "Encourage sharing experiences"
+                ],
+                goalZh: "維持關係，提升客單價",
+                goalCn: "维持关系，提升客单价",
+                goalEn: "Maintain relationship, increase order value"
+            },
+            2: { 
+                nameZh: "核心價值客", nameCn: "核心价值客", nameEn: "Core Value Customers",
+                freq: 12.40, amount: 93.98, days: 26.72, sat: 3.30, 
+                churn: 22, 
+                color: "#3b82f6",
+                insightZh: "高消費高頻次，是品牌的核心資產，需重點維護。",
+                insightCn: "高消费高频次，是品牌的核心资产，需重点维护。",
+                insightEn: "High spending and frequency - core brand assets.",
+                actionsZh: [
+                    "提供新品優先試喝權",
+                    "邀請參與品牌活動或產品研發",
+                    "設定專屬客服，提升服務體驗"
+                ],
+                actionsCn: [
+                    "提供新品优先试喝权",
+                    "邀请参与品牌活动或产品研发",
+                    "设置专属客服，提升服务体验"
+                ],
+                actionsEn: [
+                    "Priority tasting of new products",
+                    "Invite to brand events",
+                    "Dedicated customer service"
+                ],
+                goalZh: "提升滿意度，防止被競爭對手挖角",
+                goalCn: "提升满意度，防止被竞争对手挖角",
+                goalEn: "Improve satisfaction, prevent competitor poaching"
+            },
+            3: { 
+                nameZh: "高風險流失客", nameCn: "高风险流失客", nameEn: "High-Risk Churn",
+                freq: 6.29, amount: 82.58, days: 54.87, sat: 2.30, 
+                churn: 35, 
+                color: "#ef4444",
+                insightZh: "滿意度低且久未消費，流失風險最高，需緊急介入挽回。",
+                insightCn: "满意度低且久未消费，流失风险最高，需紧急介入挽回。",
+                insightEn: "Low satisfaction, long absence - urgent intervention needed.",
+                actionsZh: [
+                    "主動回訪了解不滿意原因",
+                    "提供真誠補償體驗（免費升級/贈品）",
+                    "改善服務流程後邀請再次體驗"
+                ],
+                actionsCn: [
+                    "主动回访了解不满意原因",
+                    "提供真诚补偿体验（免费升级/赠品）",
+                    "改善服务流程后邀请再次体验"
+                ],
+                actionsEn: [
+                    "Proactively follow up on dissatisfaction",
+                    "Provide sincere compensation (free upgrade/gift)",
+                    "Improve service, invite to try again"
+                ],
+                goalZh: "緊急挽回，解決服務問題",
+                goalCn: "紧急挽回，解决服务问题",
+                goalEn: "Urgent recovery, resolve service issues"
+            }
+        };
+
+        // 圖表實例
+        let gaugeChartInst = null;
+        let trendChartInst = null;
+        let radarChartInst = null;
+        let csvData = [];
+        let lastResult = null;
+        let currentLang = 'zh';
+
+        // ==================== 工具函數 ====================
+        // 安全地設置元素內容，避免 XSS 風險
+        function safeSetText(elementId, text) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = text;
+            }
+        }
+        
+        // 安全地設置 HTML 內容（僅在必要時使用）
+        function safeSetHTML(elementId, html) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                // 使用 textContent 替代 innerHTML 來避免 XSS
+                // 如果需要 HTML，可以使用 createElement 和 appendChild
+                element.textContent = '';
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                while (tempDiv.firstChild) {
+                    element.appendChild(tempDiv.firstChild);
+                }
+            }
+        }
+        
+        // 安全地創建行動建議列表項目
+        function createActionListItem(action, index) {
+            const li = document.createElement('li');
+            li.className = "flex items-start";
+            
+            const span = document.createElement('span');
+            span.className = "mr-2 text-green-600 font-bold";
+            span.textContent = `${index + 1}.`;
+            
+            li.appendChild(span);
+            li.appendChild(document.createTextNode(` ${action}`));
+            
+            return li;
+        }
+
+        function fillExample() {
+            document.getElementById('freq').value = 7.1;
+            document.getElementById('amount').value = 59.04;
+            document.getElementById('days').value = 22.29;
+            document.getElementById('satisfaction').value = 4.24;
+            evaluateCustomer();
+        }
+
+        function calculateDistance(input, center) {
+            const scale = { freq: 15, amount: 50, days: 90, sat: 2 };
+            const diffFreq = Math.pow((input.freq - center.freq) / scale.freq, 2);
+            const diffAmount = Math.pow((input.amount - center.amount) / scale.amount, 2);
+            const diffDays = Math.pow((input.days - center.days) / scale.days, 2);
+            const diffSat = Math.pow((input.sat - center.sat) / scale.sat, 2);
+            return Math.sqrt(diffFreq + diffAmount + diffDays + diffSat);
+        }
+
+        function classifyCustomer(freq, amount, days, sat) {
+            const input = { freq, amount, days, sat };
+            let distances = {};
+            for (let clusterId in clusterCenters) {
+                distances[clusterId] = calculateDistance(input, clusterCenters[clusterId]);
+            }
+            let closestCluster = Object.keys(distances).reduce((a, b) => 
+                distances[a] < distances[b] ? a : b
+            );
+            return {
+                clusterId: parseInt(closestCluster),
+                ...clusterCenters[closestCluster],
+                distance: distances[closestCluster]
+            };
+        }
+
+        // ==================== CSV 功能 ====================
+        function downloadTemplate() {
+            const template = [
+                ['customer_id', 'monthly_visits', 'avg_spending', 'days_since_last_visit', 'satisfaction'],
+                ['C001', '8.42', '73.14', '70.52', '4.23'],
+                ['C002', '7.1', '59.04', '22.29', '4.24'],
+                ['C003', '12.40', '93.98', '26.72', '3.30'],
+                ['C004', '6.29', '82.58', '54.87', '2.30']
+            ];
+            const csvContent = template.map(row => row.join(',')).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = currentLang === 'zh' ? '顧客數據模板.csv' : currentLang === 'cn' ? '顾客数据模板.csv' : 'customer_template.csv';
+            link.click();
+        }
+
+        function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    csvData = results.data;
+                    displayCSVPreview(csvData);
+                }
+            });
+        }
+
+        function displayCSVPreview(data) {
+            const previewDiv = document.getElementById('csvPreview');
+            if (!previewDiv || data.length === 0) return;
+            
+            const previewData = data.slice(0, 5);
+            const headers = Object.keys(previewData[0]);
+            
+            // 清除之前的內容
+            previewDiv.textContent = '';
+            
+            // 創建容器
+            const container = document.createElement('div');
+            container.className = 'overflow-x-auto';
+            
+            // 創建表格
+            const table = document.createElement('table');
+            table.className = 'min-w-full text-xs';
+            
+            // 創建表頭
+            const thead = document.createElement('thead');
+            thead.className = 'bg-gray-100';
+            const headerRow = document.createElement('tr');
+            
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.className = 'px-2 py-1 text-left';
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            // 創建表身
+            const tbody = document.createElement('tbody');
+            
+            previewData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b';
+                
+                headers.forEach(header => {
+                    const td = document.createElement('td');
+                    td.className = 'px-2 py-1';
+                    td.textContent = row[header] || '-';
+                    tr.appendChild(td);
+                });
+                
+                tbody.appendChild(tr);
+            });
+            
+            table.appendChild(tbody);
+            container.appendChild(table);
+            
+            // 創建數據統計
+            const stats = document.createElement('p');
+            stats.className = 'text-xs text-gray-500 mt-2';
+            stats.textContent = currentLang === 'zh' ? `共 ${data.length} 筆數據` :
+                               currentLang === 'cn' ? `共 ${data.length} 笔数据` :
+                               `Total ${data.length} records`;
+            
+            container.appendChild(stats);
+            previewDiv.appendChild(container);
+            previewDiv.classList.remove('hidden');
+        }
+
+        function runBatchAnalysis() {
+            if (csvData.length === 0) {
+                alert(currentLang === 'zh' ? '請先上傳 CSV 文件' : currentLang === 'cn' ? '请先上传 CSV 文件' : 'Please upload CSV file first');
+                return;
+            }
+            
+            const results = csvData.map(row => {
+                const freq = parseFloat(row.monthly_visits) || 0;
+                const amount = parseFloat(row.avg_spending) || 0;
+                const days = parseFloat(row.days_since_last_visit) || 0;
+                const sat = parseFloat(row.satisfaction) || 0;
+                
+                const result = classifyCustomer(freq, amount, days, sat);
+                return {
+                    customer_id: row.customer_id || 'Unknown',
+                    clusterId: result.clusterId,
+                    name: currentLang === 'zh' ? result.nameZh : currentLang === 'cn' ? result.nameCn : result.nameEn,
+                    churn: result.churn
+                };
+            });
+            
+            displayBatchResults(results);
+        }
+
+        function displayBatchResults(results) {
+            const resultsDiv = document.getElementById('batchResults');
+            if (!resultsDiv) return;
+            
+            const clusterCount = {};
+            results.forEach(r => {
+                clusterCount[r.clusterId] = (clusterCount[r.clusterId] || 0) + 1;
+            });
+            
+            const clusterLabels = currentLang === 'zh' ? ["群體 0", "群體 1", "群體 2", "群體 3"] :
+                                 currentLang === 'cn' ? ["群体 0", "群体 1", "群体 2", "群体 3"] :
+                                 ["Cluster 0", "Cluster 1", "Cluster 2", "Cluster 3"];
+            
+            let html = `
+                <div class="mb-4">
+                    <h4 class="font-bold text-sm mb-2">${currentLang === 'zh' ? '📊 群體分佈' : currentLang === 'cn' ? '📊 群体分布' : '📊 Cluster Distribution'}</h4>
+                    <div class="grid grid-cols-4 gap-2 text-xs">
+                        ${Object.entries(clusterCount).map(([id, count]) => `
+                            <div class="bg-gray-50 p-2 rounded text-center">
+                                <div class="font-bold text-green-700">${count}</div>
+                                <div class="text-gray-500">${clusterLabels[id]}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-xs">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-2 py-1 text-left">${currentLang === 'zh' ? '顧客 ID' : currentLang === 'cn' ? '顾客 ID' : 'Customer ID'}</th>
+                                <th class="px-2 py-1 text-left">${currentLang === 'zh' ? '群體' : currentLang === 'cn' ? '群体' : 'Cluster'}</th>
+                                <th class="px-2 py-1 text-left">${currentLang === 'zh' ? '流失風險' : currentLang === 'cn' ? '流失风险' : 'Churn Risk'}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${results.slice(0, 10).map(r => `
+                                <tr class="border-b">
+                                    <td class="px-2 py-1">${r.customer_id}</td>
+                                    <td class="px-2 py-1">${r.name}</td>
+                                    <td class="px-2 py-1">${r.churn}%</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    ${results.length > 10 ? `<p class="text-xs text-gray-500 mt-2">${currentLang === 'zh' ? `共 ${results.length} 筆結果` : currentLang === 'cn' ? `共 ${results.length} 笔结果` : `Total ${results.length} results`}</p>` : ''}
+                </div>
+            `;
+            
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.remove('hidden');
+        }
+
+        // ==================== 表單處理 ====================
+        function evaluateCustomer() {
+            const freq = parseFloat(document.getElementById('freq').value);
+            const amount = parseFloat(document.getElementById('amount').value);
+            const days = parseFloat(document.getElementById('days').value);
+            const sat = parseFloat(document.getElementById('satisfaction').value);
+            
+            let isValid = true;
+            
+            if (isNaN(freq) || freq < 0 || freq > 50) { 
+                document.getElementById('freqError').classList.remove('hidden'); 
+                isValid = false; 
+            } else { 
+                document.getElementById('freqError').classList.add('hidden'); 
+            }
+            
+            if (isNaN(amount) || amount < 0 || amount > 500) { 
+                document.getElementById('amountError').classList.remove('hidden'); 
+                isValid = false; 
+            } else { 
+                document.getElementById('amountError').classList.add('hidden'); 
+            }
+            
+            if (isNaN(days) || days < 0 || days > 365) { 
+                document.getElementById('daysError').classList.remove('hidden'); 
+                isValid = false; 
+            } else { 
+                document.getElementById('daysError').classList.add('hidden'); 
+            }
+            
+            if (isNaN(sat) || sat < 1 || sat > 5) { 
+                document.getElementById('satError').classList.remove('hidden'); 
+                isValid = false; 
+            } else { 
+                document.getElementById('satError').classList.add('hidden'); 
+            }
+            
+            if (!isValid) return;
+            
+            const result = classifyCustomer(freq, amount, days, sat);
+            lastResult = result;
+            
+            updateResultUI(result, { freq, amount, days, sat });
+            renderGauge(result.churn, result.color);
+            renderTrendChart(freq, days);
+            renderRadarChart(freq, amount, days, sat);
+        }
+
+        function updateResultUI(result, input) {
+            let name, insight, actions, goal;
+            
+            if (currentLang === 'en') {
+                name = result.nameEn;
+                insight = result.insightEn;
+                actions = result.actionsEn;
+                goal = result.goalEn;
+            } else if (currentLang === 'cn') {
+                name = result.nameCn;
+                insight = result.insightCn;
+                actions = result.actionsCn;
+                goal = result.goalCn;
+            } else {
+                name = result.nameZh;
+                insight = result.insightZh;
+                actions = result.actionsZh;
+                goal = result.goalZh;
+            }
+            
+            document.getElementById('clusterBadge').innerHTML = (currentLang === 'zh' ? '群組 ' : currentLang === 'cn' ? '群体 ' : 'Cluster ') + result.clusterId;
+            document.getElementById('clusterName').innerText = name;
+            document.getElementById('riskBadge').innerHTML = `📉 ${currentLang === 'zh' ? '流失比例' : currentLang === 'cn' ? '流失比例' : 'Churn Rate'} ${result.churn}%`;
+            
+            // 更新 insight
+            if (currentLang === 'en') {
+                document.getElementById('insightText').classList.remove('active');
+                document.getElementById('insightTextCn').classList.remove('active');
+                document.getElementById('insightTextEn').classList.add('active');
+                document.getElementById('insightTextEn').innerText = insight;
+            } else if (currentLang === 'cn') {
+                document.getElementById('insightText').classList.remove('active');
+                document.getElementById('insightTextEn').classList.remove('active');
+                document.getElementById('insightTextCn').classList.add('active');
+                document.getElementById('insightTextCn').innerText = insight;
+            } else {
+                document.getElementById('insightText').classList.add('active');
+                document.getElementById('insightTextEn').classList.remove('active');
+                document.getElementById('insightTextCn').classList.remove('active');
+                document.getElementById('insightText').innerText = insight;
+            }
+            
+            document.getElementById('resFreq').innerText = input.freq.toFixed(2);
+            document.getElementById('resAmount').innerText = input.amount.toFixed(2);
+            document.getElementById('resDays').innerText = input.days.toFixed(2);
+            document.getElementById('resSat').innerText = input.sat.toFixed(2);
+            document.getElementById('goalText').innerHTML = `🎯 ${currentLang === 'zh' ? '目標：' : currentLang === 'cn' ? '目标：' : 'Goal: '}${goal}`;
+            
+            const actionList = document.getElementById('actionList');
+            actionList.innerHTML = '';
+            actions.forEach((action, index) => {
+                const li = document.createElement('li');
+                li.className = "flex items-start";
+                li.innerHTML = `<span class="mr-2 text-green-600 font-bold">${index + 1}.</span> ${action}`;
+                actionList.appendChild(li);
+            });
+            
+            document.getElementById('timestamp').innerText = new Date().toLocaleTimeString(
+                currentLang === 'zh' ? 'zh-TW' : currentLang === 'cn' ? 'zh-CN' : 'en-US', 
+                {hour: '2-digit', minute:'2-digit'}
+            );
+            
+            const riskLevelEl = document.getElementById('riskLevel');
+            if (result.churn >= 30) {
+                riskLevelEl.innerText = currentLang === 'zh' ? '🔴 高流失風險' : currentLang === 'cn' ? '🔴 高流失风险' : '🔴 High Churn Risk';
+            } else if (result.churn >= 20) {
+                riskLevelEl.innerText = currentLang === 'zh' ? '🟠 中高流失風險' : currentLang === 'cn' ? '🟠 中高流失风险' : '🟠 Medium-High Churn Risk';
+            } else if (result.churn >= 10) {
+                riskLevelEl.innerText = currentLang === 'zh' ? '🟡 中流失風險' : currentLang === 'cn' ? '🟡 中流失风险' : '🟡 Medium Churn Risk';
+            } else {
+                riskLevelEl.innerText = currentLang === 'zh' ? '🟢 低流失風險' : currentLang === 'cn' ? '🟢 低流失风险' : '🟢 Low Churn Risk';
+            }
+        }
+
+        function updateUIText(result) {
+            let name, insight, actions, goal;
+            
+            if (currentLang === 'en') {
+                name = result.nameEn;
+                insight = result.insightEn;
+                actions = result.actionsEn;
+                goal = result.goalEn;
+            } else if (currentLang === 'cn') {
+                name = result.nameCn;
+                insight = result.insightCn;
+                actions = result.actionsCn;
+                goal = result.goalCn;
+            } else {
+                name = result.nameZh;
+                insight = result.insightZh;
+                actions = result.actionsZh;
+                goal = result.goalZh;
+            }
+            
+            document.getElementById('clusterBadge').innerHTML = (currentLang === 'zh' ? '群組 ' : currentLang === 'cn' ? '群体 ' : 'Cluster ') + result.clusterId;
+            document.getElementById('clusterName').innerText = name;
+            
+            if (currentLang === 'en') {
+                document.getElementById('insightText').classList.remove('active');
+                document.getElementById('insightTextCn').classList.remove('active');
+                document.getElementById('insightTextEn').classList.add('active');
+                document.getElementById('insightTextEn').innerText = insight;
+            } else if (currentLang === 'cn') {
+                document.getElementById('insightText').classList.remove('active');
+                document.getElementById('insightTextEn').classList.remove('active');
+                document.getElementById('insightTextCn').classList.add('active');
+                document.getElementById('insightTextCn').innerText = insight;
+            } else {
+                document.getElementById('insightText').classList.add('active');
+                document.getElementById('insightTextEn').classList.remove('active');
+                document.getElementById('insightTextCn').classList.remove('active');
+                document.getElementById('insightText').innerText = insight;
+            }
+            
+            document.getElementById('goalText').innerHTML = `🎯 ${currentLang === 'zh' ? '目標：' : currentLang === 'cn' ? '目标：' : 'Goal: '}${goal}`;
+            
+            const actionList = document.getElementById('actionList');
+            actionList.innerHTML = '';
+            actions.forEach((action, index) => {
+                const li = document.createElement('li');
+                li.className = "flex items-start";
+                li.innerHTML = `<span class="mr-2 text-green-600 font-bold">${index + 1}.</span> ${action}`;
+                actionList.appendChild(li);
+            });
+        }
+
+        // ==================== 圖表渲染 ====================
+        function renderGauge(percent, color) {
+            const ctx = document.getElementById('gaugeChart').getContext('2d');
+            if (gaugeChartInst) gaugeChartInst.destroy();
+            
+            gaugeChartInst = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Risk', 'Safe'],
+                    datasets: [{
+                        data: [percent, 100 - percent],
+                        backgroundColor: [color, '#e5e7eb'],
+                        borderWidth: 0,
+                        circumference: 180,
+                        rotation: 270,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    cutout: '70%'
+                }
+            });
+            document.getElementById('gaugeValue').innerText = percent + "%";
+        }
+
+        function renderTrendChart(freq, days) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            if (trendChartInst) trendChartInst.destroy();
+            
+            const months = currentLang === 'en' ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'] : ['1月', '2月', '3月', '4月', '5月', '6月'];
+            const baseAmount = freq * 73;
+            const trendData = [];
+            for (let i = 0; i < 6; i++) {
+                const decline = days > 60 ? (i * 0.3) : (days > 30 ? (i * 0.15) : 0);
+                trendData.push(Math.max(0, baseAmount * (1 - decline) * (0.8 + Math.random() * 0.4)));
+            }
+            
+            trendChartInst = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: currentLang === 'zh' ? '消費金額' : currentLang === 'cn' ? '消费金额' : 'Spending',
+                        data: trendData,
+                        borderColor: '#047857',
+                        backgroundColor: 'rgba(4, 120, 87, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { display: false } }, 
+                        x: { grid: { display: false } } 
+                    }
+                }
+            });
+        }
+
+        function renderRadarChart(freq, amount, days, sat) {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            if (radarChartInst) radarChartInst.destroy();
+            
+            const normFreq = Math.min(100, (freq / 15) * 100);
+            const normAmount = Math.min(100, (amount / 100) * 100);
+            const normDays = Math.max(0, 100 - (days / 90) * 100);
+            const normSat = (sat / 5) * 100;
+            
+            const labels = currentLang === 'zh' ? ['消費頻率', '消費金額', '近期活躍', '滿意度'] :
+                          currentLang === 'cn' ? ['消费频率', '消费金额', '近期活跃', '满意度'] :
+                          ['Visit Freq', 'Spending', 'Recency', 'Satisfaction'];
+            
+            radarChartInst = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: currentLang === 'zh' ? '此顧客' : currentLang === 'cn' ? '此顾客' : 'This Customer',
+                        data: [normFreq, normAmount, normDays, normSat],
+                        backgroundColor: 'rgba(4, 120, 87, 0.2)',
+                        borderColor: '#047857',
+                        pointBackgroundColor: '#047857'
+                    }, {
+                        label: currentLang === 'zh' ? '平均水準' : currentLang === 'cn' ? '平均水平' : 'Average',
+                        data: [50, 50, 50, 50],
+                        backgroundColor: 'rgba(156, 163, 175, 0.1)',
+                        borderColor: '#9ca3af',
+                        pointBackgroundColor: '#9ca3af',
+                        borderDash: [5, 5]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        r: { 
+                            min: 0, 
+                            max: 100, 
+                            grid: { color: '#e5e7eb' }, 
+                            pointLabels: { font: { size: 10 } } 
+                        } 
+                    },
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { boxWidth: 10, font: { size: 10 } } 
+                        } 
+                    }
+                }
+            });
+        }
+
+        // 頁面載入時初始化
+        window.onload = function() {
+            switchLanguage('zh');
+            evaluateCustomer();
+        };
+    </script>
+    
+    <!-- Toast 通知容器 -->
+    <div id="toastContainer" class="toast-container"></div>
+    
+    <!-- 外部 JavaScript 檔案 -->
+    <script src="app.js"></script>
+    
+    <!-- 圖表相關函數 -->
+    <script>
+        function renderGauge(percent, color) {
+            const ctx = document.getElementById('gaugeChart').getContext('2d');
+            if (gaugeChartInst) gaugeChartInst.destroy();
+            
+            gaugeChartInst = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Risk', 'Safe'],
+                    datasets: [{
+                        data: [percent, 100 - percent],
+                        backgroundColor: [color, '#e5e7eb'],
+                        borderWidth: 0,
+                        circumference: 180,
+                        rotation: 270,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    cutout: '70%'
+                }
+            });
+            document.getElementById('gaugeValue').innerText = percent + "%";
+        }
+
+        function renderTrendChart(freq, days) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            if (trendChartInst) trendChartInst.destroy();
+            
+            const months = currentLang === 'en' ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'] : ['1月', '2月', '3月', '4月', '5月', '6月'];
+            const baseAmount = freq * 73;
+            const trendData = [];
+            for (let i = 0; i < 6; i++) {
+                const decline = days > 60 ? (i * 0.3) : (days > 30 ? (i * 0.15) : 0);
+                trendData.push(Math.max(0, baseAmount * (1 - decline) * (0.8 + Math.random() * 0.4)));
+            }
+            
+            trendChartInst = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: currentLang === 'zh' ? '消費金額' : currentLang === 'cn' ? '消费金额' : 'Spending',
+                        data: trendData,
+                        borderColor: '#047857',
+                        backgroundColor: 'rgba(4, 120, 87, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { display: false } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderRadarChart(freq, amount, days, sat) {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            if (radarChartInst) radarChartInst.destroy();
+            
+            const normFreq = Math.min(100, (freq / 15) * 100);
+            const normAmount = Math.min(100, (amount / 100) * 100);
+            const normDays = Math.max(0, 100 - (days / 90) * 100);
+            const normSat = (sat / 5) * 100;
+            
+            const labels = currentLang === 'zh' ? ['消費頻率', '消費金額', '近期活躍', '滿意度'] :
+                          currentLang === 'cn' ? ['消费频率', '消费金额', '近期活跃', '满意度'] :
+                          ['Visit Freq', 'Spending', 'Recency', 'Satisfaction'];
+            
+            radarChartInst = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: currentLang === 'zh' ? '此顧客' : currentLang === 'cn' ? '此顾客' : 'This Customer',
+                        data: [normFreq, normAmount, normDays, normSat],
+                        backgroundColor: 'rgba(4, 120, 87, 0.2)',
+                        borderColor: '#047857',
+                        pointBackgroundColor: '#047857'
+                    }, {
+                        label: currentLang === 'zh' ? '平均水準' : currentLang === 'cn' ? '平均水平' : 'Average',
+                        data: [50, 50, 50, 50],
+                        backgroundColor: 'rgba(156, 163, 175, 0.1)',
+                        borderColor: '#9ca3af',
+                        pointBackgroundColor: '#9ca3af',
+                        borderDash: [5, 5]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 100,
+                            grid: { color: '#e5e7eb' },
+                            pointLabels: { font: { size: 10 } }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 10, font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 頁面載入時初始化
+        window.onload = function() {
+            switchLanguage('zh');
+            evaluateCustomer();
+        };
+    </script>
+</body>
+</html>
